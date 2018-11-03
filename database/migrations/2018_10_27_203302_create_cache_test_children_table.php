@@ -13,7 +13,7 @@ class CreateCacheTestChildrenTable extends Migration
      */
     public function up()
     {
-        Schema::create('reports', function (Blueprint $table) {
+        Schema::create('company_reports', function (Blueprint $table) {
             $table->increments('id');
             $table->integer('company_id');
             $table->boolean('bool_1')->default(false);
@@ -129,6 +129,6 @@ class CreateCacheTestChildrenTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('reports');
+        Schema::dropIfExists('company_reports');
     }
 }
