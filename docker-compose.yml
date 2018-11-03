@@ -1,0 +1,89 @@
+version: '2'
+
+services:
+  base:
+    build:
+      context: ./
+      dockerfile: ./docker/Dockerfile
+    command: /bin/true
+    image: cachetest_base:latest
+
+  database:
+    container_name: cachetest_database
+    image: mysql:5.7.11
+    ports:
+      - "3306:3306"
+    env_file: .env
+    environment:
+      MYSQL_ROOT_PASSWORD: "$DB_PASSWORD"
+      MYSQL_DATABASE: "$DB_DATABASE"
+      MYSQL_USER: "$DB_USERNAME"
+      MYSQL_PASSWORD: "$DB_PASSWORD"
+    depends_on:
+      - base
+    networks:
+      - cachetest
+
+  queue:
+    container_name: cachetest_queue
+    build:
+      context: ./
+      dockerfile: ./docker/common/queue/Dockerfile
+    image: cachetest_queue_base
+    env_file: .env
+    volumes:
+      - .:/var/www
+    depends_on:
+      - database
+    links:
+      - database:database
+    networks:
+      - cachetest
+    entrypoint: /bin/sh /var/www/docker/development/queue/run.sh
+
+  schedule:
+    container_name: cachetest_schedule
+    build:
+      context: ./
+      dockerfile: ./docker/common/schedule/Dockerfile
+    image: cachetest_schedule_base
+    env_file: .env
+    volumes:
+      - .:/var/www
+    depends_on:
+      - database
+      - queue
+    links:
+      - database:database
+    networks:
+      - cachetest
+    entrypoint: /bin/sh /var/www/docker/development/fix-permissions.sh
+
+  selenium:
+    container_name: cachetest_selenium
+    image: selenium/standalone-chrome:latest
+    networks:
+      - cachetest
+
+  web:
+    container_name: cachetest_web
+    build:
+      context: ./
+      dockerfile: ./docker/common/web/Dockerfile
+    image: cachetest_web_base
+    ports:
+      - "80:80"
+    env_file: .env
+    volumes:
+      - .:/var/www
+    depends_on:
+      - database
+    links:
+      - database:database
+    networks:
+      - cachetest
+    entrypoint: /bin/sh /var/www/docker/development/fix-permissions.sh
+
+networks:
+  cachetest:
+    driver: bridge

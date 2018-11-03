@@ -1,0 +1,81 @@
+version: '2'
+
+services:
+  core:
+    build:
+      context: ../
+      dockerfile: ./production/core/Dockerfile
+    command: /bin/true
+    image: cachetest_core:latest
+
+  database:
+    container_name: cachetest_database
+    image: mysql:5.7.11
+    ports:
+      - "3306:3306"
+    env_file: .env
+    environment:
+      MYSQL_ROOT_PASSWORD: "$DB_PASSWORD"
+      MYSQL_DATABASE: "$DB_DATABASE"
+      MYSQL_USER: "$DB_USERNAME"
+      MYSQL_PASSWORD: "$DB_PASSWORD"
+    depends_on:
+      - core
+    networks:
+      - cachetest
+
+  queue:
+    container_name: cachetest_queue
+    build:
+      context: ../
+      dockerfile: ./production/queue/Dockerfile
+    image: cachetest_queue
+    env_file: .env
+    volumes:
+      - .:/var/www
+    depends_on:
+      - core
+      - database
+    links:
+      - database:database
+    networks:
+      - cachetest
+
+  schedule:
+    container_name: cachetest_schedule
+    build:
+      context: ../
+      dockerfile: ./production/schedule/Dockerfile
+    image: cachetest_schedule
+    env_file: .env
+    volumes:
+      - .:/var/www
+    depends_on:
+      - core
+      - database
+      - queue
+    links:
+      - database:database
+    networks:
+      - cachetest
+
+  web:
+    container_name: cachetest_web
+    build:
+      context: ../
+      dockerfile: ./production/web/Dockerfile
+    image: cachetest_web
+    ports:
+      - "80:80"
+    env_file: .env
+    depends_on:
+      - core
+      - database
+    links:
+      - database:database
+    networks:
+      - cachetest
+
+networks:
+  cachetest:
+    driver: bridge
